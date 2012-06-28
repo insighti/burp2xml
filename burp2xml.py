@@ -103,7 +103,7 @@ def main():
 	xml = burp_to_xml(sys.argv[1])
 	# Write out file to a optional argument or provided file + xml extension
 	out = sys.argv[2] if (len(sys.argv) > 2) else sys.argv[1]+'.xml'
-	out = open(out, 'wb')
+	out = sys.stdout if out == '-' else open(out, 'wb')
 	out.write(xml)
 	out.close()
 	#sys.stdout.write("# Output written to %s.xml" % out)
