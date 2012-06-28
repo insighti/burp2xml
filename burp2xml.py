@@ -46,7 +46,10 @@ def burp_binary_field(field,i):
 		if field[i+1] == '\x00': # (64bit) 8 Byte Java Date
 			ms = struct.unpack('>Q',field[i+1:i+9])[0]		
 			date = milliseconds_to_date(ms)
-			value =	date.ctime() # Use the ctime string format for date
+			if type(date) == str:
+				value = date
+			else:
+				value =	date.ctime() # Use the ctime string format for date
 		else: # Serial Number only used ocasionally in Burp
 			value = str(struct.unpack('>Q',field[i+1:i+9])[0])
 		return value,9
