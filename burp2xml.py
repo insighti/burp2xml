@@ -59,9 +59,9 @@ def burp_binary_field(field,i):
 		length = struct.unpack('>I',field[i+1:i+5])[0]
 		#print "Saw string of length",length,"at",i+5,i+5+length
 		value = field[i+5:i+5+length]				
+		value = ''.join(c for c in value if c in nvprint) # Remove nonprintables
 		if '<' in value or '>' in value or '&' in value: # Sanatize HTML w/CDATA
 			value = '<![CDATA[' + value.replace(']]>',']]><![CDATA[') + ']]>' 
-		value = ''.join(c for c in value if c in nvprint) # Remove nonprintables
 		return value,5+length # ** TODO: Verify length by matching end tag **
 	print "Unknown binary format",repr(field[i])
 	return None,-1
