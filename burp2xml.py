@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 #Developed by Paul Haas, <phaas AT redspin DOT com> under Redspin. Inc.
 #Licensed under the GNU Public License version 3.0 (2008-2009)
@@ -35,9 +34,11 @@ def milliseconds_to_date(milliseconds):
 		date = str(milliseconds)
 	return date	
 
-def burp_binary_field(field,i):
+def burp_binary_field(field,i,non_printable):
 	'''Strip Burp Suite's binary format characters types from our data.	
-	The first character after the leading tag describes the type of the data.'''
+	The first character after the leading tag describes the type of the data.
+        If non_printable is true, keep nonprintable characters
+        '''
 	if len(field) <= i:
 		return None,-1
 	elif field[i] == '\x00': # 4 byte integer value
@@ -59,16 +60,19 @@ def burp_binary_field(field,i):
 		length = struct.unpack('>I',field[i+1:i+5])[0]
 		#print "Saw string of length",length,"at",i+5,i+5+length
 		value = field[i+5:i+5+length]				
-		value = ''.join(c for c in value if c in nvprint) # Remove nonprintables
+		if not non_printable:
+                        value = ''.join(c for c in value if c in nvprint) # Remove nonprintables
 		if '<' in value or '>' in value or '&' in value: # Sanatize HTML w/CDATA
 			value = '<![CDATA[' + value.replace(']]>',']]><![CDATA[') + ']]>' 
 		return value,5+length # ** TODO: Verify length by matching end tag **
 	print "Unknown binary format",repr(field[i])
 	return None,-1
 
-def burp_to_xml(filename):
+def burp_to_xml(filename,non_printable):
 	'''Unzip Burp's file, remove non-printable characters, CDATA any HTML,
-	include a valid XML header and trailer, and return a valid XML string.'''
+	include a valid XML header and trailer, and return a valid XML string.
+        if non_printable is true, retain nonprintable characters
+        '''
 
 	xml = '' # Our output string
 	z = zipfile.ZipFile(filename) # Open Burp's zip file
@@ -82,7 +86,7 @@ def burp_to_xml(filename):
 		m = TAG.match(burp,index) # Attempt to get the next tag
 		if not m: # Data folows
 			# Read the type of data using Burp's binary data headers		
-			value, length = burp_binary_field(burp, index)
+			value, length = burp_binary_field(burp, index, non_printable)
 			if value is None: break
 			
 			xml += value
@@ -95,18 +99,32 @@ def burp_to_xml(filename):
 
 def main():
 	'''Called if script is run from the command line.'''
-	import sys
-	if (len(sys.argv) < 2):
-		print __doc__
-		print "Usage:",sys.argv[0],"burp_session_file {output XML name}"
-		exit(1)
-	xml = burp_to_xml(sys.argv[1])
+
+        from optparse import OptionParser
+        import sys
+
+        NON_PRINTABLE = False
+        VERBOSE = False
+
+        usage = ("%prog [options] burp-session-file {output XML name or -}\n"
+                 "  convert a burp session file to xml\n")
+        parser = OptionParser()
+        parser.add_option("-v","--verbose",
+                          action="store_true", dest="VERBOSE", default=False,
+                          help="verbose")
+        parser.add_option("-n","--non-printable",
+                          action="store_true", dest="NON_PRINTABLE",
+                          default=False,
+                          help="Retain nonprintable characters")
+        (options, args) = parser.parse_args()
+
 	# Write out file to a optional argument or provided file + xml extension
-	out = sys.argv[2] if (len(sys.argv) > 2) else sys.argv[1]+'.xml'
-	out = sys.stdout if out == '-' else open(out, 'wb')
-	out.write(xml)
+	outfile = args[1] if (len(args) > 1) else args[0]+'.xml'
+	out = sys.stdout if outfile=='-' else open(outfile, 'wb')
+	out.write(burp_to_xml(args[0],options.NON_PRINTABLE))
 	out.close()
-	#sys.stdout.write("# Output written to %s.xml" % out)
+	if options.VERBOSE:
+                sys.stderr.write("# Output written to %s\n" % outfile)
 
 if __name__ == '__main__':
 	main()
