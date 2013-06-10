@@ -1,11 +1,14 @@
-burp2xml:
+burp2xml
+========
 
-  Script to convert a burp session file to xml.
+Tool to convert a burp session file to xml.
+
 
 This is a fork of the repo found at
 https://github.com/SecurityInnovation/burp2xml.git
 
-Changes include the following:
+Changes from SecuityInnovation/burp2xml
+---------------------------------------
 
 * Added setup.py
 * Use OptionParser to get args
