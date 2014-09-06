@@ -3,10 +3,10 @@
 from distutils.core import setup
 
 setup(name='burp2xml',
-      version='1.1',
+      version='1.2',
       description='Converts Burp session files to xml',
-      author='Paul Haas',
-      author_email='phaas@redspin.com',
-      url='https://github.com/jnwilson/burp2xml',
+      author='Paul Haas / Lukas Kuzmiak',
+      author_email='phaas@redspin.com, lukas.kuzmiak@insighti.org',
+      url='https://github.com/insighti/burp2xml',
       py_modules=['burp2xml'],
      )
