@@ -13,12 +13,11 @@ internal parser, we have no way to extract results from its files without
 loading the results in Burp.  
 
 This tool takes a zipped Burp file and outputs a XML document based upon the
-provided arguments which allows regular XPATH queries and XSL transformations.
-'''
+provided arguments which allows regular XPATH queries and XSL transformations.'''
 
 import datetime, string, re, struct, zipfile, sys
 
-CHUNK_SIZE = 10*1024*1024 # use negative number to read the whole file at once
+CHUNK_SIZE = 10 * 1024 * 1024 # use negative number to read the whole file at once
 
 TAG = re.compile('</?(\w*)>',re.M) # Match a XML tag
 nvprint = string.printable.replace('\x0b','').replace('\x0c','') # Printables
@@ -33,22 +32,22 @@ def milliseconds_to_date(milliseconds):
     object along with converting mili -> micro seconds in a new date object.'''
 
     try:
-        d = datetime.datetime.fromtimestamp(milliseconds/1000)
-        date = datetime.datetime(d.year,d.month,d.day,d.hour,d.minute,d.second,
-            (milliseconds%1000)*1000)        
+        d = datetime.datetime.fromtimestamp(milliseconds / 1000)
+        date = datetime.datetime(d.year, d.month, d.day, d.hour, d.minute, d.second, (milliseconds % 1000) * 1000)        
     except ValueError: # Bad date, just return the milliseconds
         date = str(milliseconds)
     return date    
 
-def parse_field(data, offset, field_type, field_len, non_printable):
+def parse_field(data, offset, field_type, field_len, non_printable, verbose):
+    '''Parse a binary field and return its value as string'''
     if (len(data) - offset) < field_len:
-        sys.stderr.write("Something went terribly wrong, not enough data for field parsing. Was parsing type %d of length %d but only got %d data\n"
-                             % (field_type, field_len, len(data) - offset))
+        sys.stderr.write("Something went terribly wrong, not enough data for field parsing. Was parsing type %d \
+                          of length %d but only got %d data\n" % (field_type, field_len, len(data) - offset))
         return None
-
+    if verbose:
+        print('Parsing type %d of length %d, got %d data' % (field_type, field_len, len(data) - offset))   
     if field_type == 0: # INTEGER
         return str(struct.unpack('>I', data[offset:offset+field_len])[0])
-
     elif field_type == 1: # LONG
         unpacked = struct.unpack('>Q', data[offset:offset+field_len])[0]
         if data[offset] == '\x00': # (64bit) 8 Byte Java Date
@@ -56,10 +55,8 @@ def parse_field(data, offset, field_type, field_len, non_printable):
             return date if type(date) == str else date.ctime()
         else: # Serial Number only used ocasionally in Burp
             return str(unpacked)
-    
     elif field_type == 2: # BOOLEAN
         return str(struct.unpack('?', data[offset:offset+field_len])[0])
-    
     elif field_type == 3: # STRING
         value = data[offset:offset+field_len]
         if not non_printable:
@@ -69,6 +66,7 @@ def parse_field(data, offset, field_type, field_len, non_printable):
         return value
 
 def identify_field(data, offset):
+    '''Identify a binary field and return its type, length and how many bytes were used by the header'''
     if (len(data) - offset) < 1:
         sys.stderr.write("Not enough data, but haven't reached end of stream yet - corrupted data?\n")
         return None, -1, 0
@@ -87,7 +85,7 @@ def identify_field(data, offset):
         sys.stderr.write("Unknown datatype, burp upgraded session files structure?\n")
         return None, -1, 0
 
-def burp_to_xml(filename, output, non_printable):
+def burp_to_xml(filename, output, non_printable, verbose):
     '''Unzip Burp's file, remove non-printable characters, CDATA any HTML,
     include a valid XML header and trailer, and return a valid XML string.
     if non_printable is true, retain nonprintable characters'''
@@ -98,6 +96,8 @@ def burp_to_xml(filename, output, non_printable):
             chunk = f.read(100) # read just the beginning
             m = TAG.match(chunk, 0)
             while m:
+                if verbose:
+                    print('Matched tag: %s' % m.group())
                 output.write(m.group())
                 offset = m.end()
                 etag = m.group().replace('<','</')
@@ -105,17 +105,18 @@ def burp_to_xml(filename, output, non_printable):
                 if not m:
                     if len(chunk) - offset == 0:
                         break # end of file
+                    
                     field_type, field_len, used_bytes = identify_field(chunk, offset)
                     offset += used_bytes
                     if field_type is None:
-                        break # corruption - bad data?
+                        exit(1)
 
                     remaining = (len(chunk) - offset) - field_len - len(etag);
                     if remaining < 0:
                         chunk += f.read(-remaining) # read what we're missing
                         remaining = 0
 
-                    output.write(parse_field(chunk, offset, field_type, field_len, non_printable))
+                    output.write(parse_field(chunk, offset, field_type, field_len, non_printable, verbose))
                     output.write(etag)
                     offset += field_len + len(etag)
 
@@ -152,11 +153,11 @@ def main():
         print __doc__
         parser.error('Input file is a mandatory parameter!')
 
-    burp_to_xml(args.file, out, args.non_printable)
+    burp_to_xml(args.file, out, args.non_printable, args.verbose)
     out.close()
     
     if args.verbose:
-                sys.stderr.write("# Output written to %s\n" % outfile)
+                sys.stderr.write("Output written to %s\n" % outfile)
 
 if __name__ == '__main__':
     main()
