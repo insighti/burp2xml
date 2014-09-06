@@ -18,7 +18,7 @@ provided arguments which allows regular XPATH queries and XSL transformations.
 
 import datetime, string, re, struct, zipfile, sys
 
-CHUNK_SIZE = 10240 # use negative number to read the whole file at once
+CHUNK_SIZE = 10*1024*1024 # use negative number to read the whole file at once
 
 TAG = re.compile('</?(\w*)>',re.M) # Match a XML tag
 nvprint = string.printable.replace('\x0b','').replace('\x0c','') # Printables

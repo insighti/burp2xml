@@ -3,18 +3,17 @@ burp2xml
 
 Tool to convert a burp session file to xml.
 
+Forked from: https://github.com/jnwilson/burp2xml
+Original script: http://www.redspin.com/blog/labs/2010/03/24/burp-suite-professional-to-xml-burp2xml/
 
-This is a fork of the repo found at
-https://github.com/SecurityInnovation/burp2xml.git
+Improvements
+------------
 
-Changes from SecuityInnovation/burp2xml
----------------------------------------
+* buffered reading - takes ~20% more time, uses 5% of previous memory usage
+* argparse instead of optparse
 
-* Added setup.py
-* Use OptionParser to get args
-* Added option -n to keep non-printable characters
-* Added option -v for verbose output
-* Avoid failure on bad dates
-* Avoid failure on reporting use of stdout
+Future improvements
+-------------------
 
-jnw@cise.ufl.edu
+* python3 support
+
