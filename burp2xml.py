@@ -100,30 +100,31 @@ def burp_to_xml(filename,non_printable):
 def main():
 	'''Called if script is run from the command line.'''
 
-        from optparse import OptionParser
+        from argparse import ArgumentParser
         import sys
 
-        NON_PRINTABLE = False
-        VERBOSE = False
+        parser = ArgumentParser(description=__doc__)
+        parser.add_argument("-f", "--file", help="Input file (burp session file)")
+        parser.add_argument("-o", "--output", help="Output file (clean XML file)")
+        parser.add_argument("-v", "--verbose", action="store_true", help="Be more verbose")
+        parser.add_argument("-n", "--non-printable", action="store_true", help="Retain non-printable characters")
+        
+        args = parser.parse_args()
 
-        usage = ("%prog [options] burp-session-file {output XML name or -}\n"
-                 "  convert a burp session file to xml\n")
-        parser = OptionParser()
-        parser.add_option("-v","--verbose",
-                          action="store_true", dest="VERBOSE", default=False,
-                          help="verbose")
-        parser.add_option("-n","--non-printable",
-                          action="store_true", dest="NON_PRINTABLE",
-                          default=False,
-                          help="Retain nonprintable characters")
-        (options, args) = parser.parse_args()
+        if args.file:
+                if args.output == "-":
+                    out = sys.stdout
+                else:
+                    out = open(args.output, 'wb') if args.output else open(args.file + '.xml', 'wb')
+        else:
+            parser.error('Input file is a mandatory parameter!')
+            print __doc__
+            print parser.print_help()
+            exit(1)
 
-	# Write out file to a optional argument or provided file + xml extension
-	outfile = args[1] if (len(args) > 1) else args[0]+'.xml'
-	out = sys.stdout if outfile=='-' else open(outfile, 'wb')
-	out.write(burp_to_xml(args[0],options.NON_PRINTABLE))
+	out.write(burp_to_xml(args.file, args.non_printable))
 	out.close()
-	if options.VERBOSE:
+	if args.verbose:
                 sys.stderr.write("# Output written to %s\n" % outfile)
 
 if __name__ == '__main__':
